@@ -27,27 +27,27 @@
     ```
     
     *Note: The SDK uses a standard interface for the http backend see [HttpClient.](https://github.com/evolv-ai/ascend-java-sdk/blob/master/src/main/java/ai/evolv/HttpClient.java). 
-    When configuring the client you must specify what implementation of HttpClient to use (or implement your own). See "Custom Http Backend" for more details.*
+    When configuring the AscendClient you must specify what implementation of HttpClient to use (or implement your own). See "Custom Http Backend" for more details.*
 
 2. Initialize the AscendClient.
     ```java
-       AscendClient client = AscendClientFactory.init(config);
+       AscendClient ascendClient = AscendClientFactory.init(config);
     ```
     
 ### Confirm the Allocation
     
-1. Once the client has been initialized, confirm the participant into the experiment.
+1. Once the AscendClient has been initialized, confirm the participant into the experiment.
     ```java
-       client.confirm();
+       ascendClient.confirm();
     ```
-    *Note: After the client has initialized, it is important to confirm the participant into the experiment. This action
+    *Note: After the AscendClient has initialized, it is important to confirm the participant into the experiment. This action
      records the participant's allocation and sends the info back to Ascend.*
 
 ### Value Retrieval
 
 1. Retrieve values from Ascend.
     ```java
-       T value = client.get(<key_for_value>, <default_value>);
+       T value = ascendClient.get(<key_for_value>, <default_value>);
     ```
     
    *Note: The return value's type is decided by the provided default value's type. If there is an issue retrieving the
@@ -61,7 +61,7 @@ subscribe to a value and apply any actions as a result of it asynchronously.
 
 1. Subscribe to a value from Ascend.
     ```java
-        client.subscribe(<key_for_value>, <default_value>, value -> {
+        ascendClient.subscribe(<key_for_value>, <default_value>, value -> {
             Your code...
         });
     ```
@@ -80,14 +80,14 @@ that is important to record is a "conversion" event. If you implemented the SDK 
 
 1. Emit a custom event.
     ```java
-       client.emitEvent(<event_type>);
+       ascendClient.emitEvent(<event_type>);
     ```
     
     AND / OR
 
 2. Emit a custom event with an associated score.
     ```java
-       client.emitEvent(<event_type>, <score>);
+       ascendClient.emitEvent(<event_type>, <score>);
     ```
     
 ### Contaminate the Allocation (optional)
@@ -96,7 +96,7 @@ Sometimes it may be necessary to contaminate the participant's allocation. Meani
 
 1. Contaminate the participant's allocation.
     ```java
-       client.contaminate();
+       ascendClient.contaminate();
     ```    
     
 
@@ -109,24 +109,25 @@ AscendConfig class.
 1. Choose an HttpClient and pass it to the AscendConfig.
 
     ```java
-       HttpClient httpClient = new AsyncHttpClientImpl(<request_timeout>);
-       AscendConfig config = AscendConfig.builder(<environment_id>, httpClient).build();
-       AscendClient client = AscendClientFactory.init(config);
+       HttpClient httpClient = new AsyncHttpClient();
+       AscendConfig config = AscendConfig.builder('sandbox', httpClient).build();
+       AscendClient ascendClient = AscendClientFactory.init(config);
     ```
-    *Note: The above HttpClient implementation uses org.asynchttpclient:async-http-client as its http client. In order to use
+    *Note: Replace 'sandbox' with your own environment id.
+    *Note: The above HttpClient implementation uses org.asynchttpclient:async-http-httpClient as its http httpClient. In order to use
     the implementation you will need to bring the package into your dependencies.*
     
 ### Custom Allocation Store (optional)
 
 Once a participant has been allocated into an experiment you may want to retain the allocations they received. To do this, create a custom allocation store by implementing the AscendAllocationStore interface. You can supply the
-custom allocation store to the client when you build the AscendConfig.
+custom allocation store to the AscendClient when you build the AscendConfig.
 
-1. Supply the allocation store to the client.
+1. Supply the allocation store to the AscendClient.
     ```java
        AscendConfig config = AscendConfig.builder(<environment_id>, <http_client>)
            .setAscendAllocationStore(<custom_store>)
            .build();
-       AscendClient client = AscendClientFactory.init(config);
+       AscendClient ascendClient = AscendClientFactory.init(config);
    ```
    
 ### Optional Configurations
