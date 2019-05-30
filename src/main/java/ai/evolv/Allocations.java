@@ -10,45 +10,68 @@ import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class Allocations {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Allocations.class);
+
     private final JsonArray allocations;
+
+    private final Audience audience = new Audience();
 
     Allocations(JsonArray allocations) {
         this.allocations = allocations;
     }
 
-    <T> T getValueFromGenome(String key, Class<T> cls) throws AscendKeyError {
+    <T> T getValueFromAllocations(String key, Class<T> cls, AscendParticipant participant)
+            throws AscendKeyError {
         ArrayList<String> keyParts = new ArrayList<>(Arrays.asList(key.split("\\.")));
-        JsonElement value = getGenomeFromAllocations().get("genome");
-        for (String part : keyParts) {
-            JsonObject jsonObject = value.getAsJsonObject();
-            value = jsonObject.get(part);
-
-            if (value == null) {
-                throw new AscendKeyError("Could not find value for key:" + key);
-            }
+        if (keyParts.isEmpty()) {
+            throw new AscendKeyError("Key provided was empty.");
         }
 
-        Gson gson = new Gson();
-        return gson.fromJson(value, cls);
+        for (JsonElement a : allocations) {
+            JsonObject allocation = a.getAsJsonObject();
+            if (!audience.filter(participant.getUserAttributes(), allocation)) {
+                try {
+                    JsonElement element = getElementFromGenome(allocation.get("genome"), keyParts);
+                    return new Gson().fromJson(element, cls);
+                } catch (AscendKeyError e) {
+                    LOGGER.debug(String.format("Unable to find key %s in experiment %s.",
+                            keyParts.toString(), allocation.get("eid").getAsString()), e);
+                    continue;
+                }
+            }
+
+            LOGGER.debug(String.format("Participant was filtered from experiment %s",
+                    allocation.get("eid").getAsString()));
+        }
+
+        throw new AscendKeyError(String.format("No value was found in any allocations for key: %s",
+                keyParts.toString()));
     }
 
-    JsonObject getGenomeFromAllocations() {
-        JsonObject genome = new JsonObject();
-        for (JsonElement allocation : allocations) {
-            JsonObject originalGenome = allocation.getAsJsonObject().getAsJsonObject("genome");
-            Set<Map.Entry<String, JsonElement>> entrySet = originalGenome.entrySet();
-            for (Map.Entry<String, JsonElement> entry : entrySet) {
-                genome.add(entry.getKey(), originalGenome.get(entry.getKey()));
+    private JsonElement getElementFromGenome(JsonElement genome, List<String> keyParts)
+            throws AscendKeyError {
+        JsonElement element = genome;
+        if (element == null) {
+            throw new AscendKeyError("Allocation genome was empty.");
+        }
+
+        for (String part : keyParts) {
+            JsonObject object = element.getAsJsonObject();
+            element = object.get(part);
+            if (element == null) {
+                throw new AscendKeyError("Could not find value for key: " + keyParts.toString());
             }
         }
-        JsonObject genomeWrapped = new JsonObject();
-        genomeWrapped.add("genome", genome);
-        return genomeWrapped;
+
+        return element;
     }
 
     /**

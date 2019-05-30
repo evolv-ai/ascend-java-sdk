@@ -15,7 +15,7 @@
         <dependency>
           <groupId>ai.evolv</groupId>
           <artifactId>ascend-sdk</artifactId>
-          <version>0.5.1</version>
+          <version>0.7.0</version>
         </dependency>
     ```
 

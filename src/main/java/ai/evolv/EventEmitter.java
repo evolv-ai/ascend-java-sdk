@@ -12,33 +12,31 @@ import org.slf4j.LoggerFactory;
 
 class EventEmitter {
 
-    private static Logger logger = LoggerFactory.getLogger(ExecutionQueue.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExecutionQueue.class);
 
     static final String CONFIRM_KEY = "confirmation";
     static final String CONTAMINATE_KEY = "contamination";
 
     private final HttpClient httpClient;
     private final AscendConfig config;
-    private final AscendParticipant ascendParticipant;
+    private final AscendParticipant participant;
 
-    EventEmitter(AscendConfig config) {
+    private final Audience audience = new Audience();
+
+    EventEmitter(AscendConfig config, AscendParticipant participant) {
         this.httpClient = config.getHttpClient();
         this.config = config;
-        this.ascendParticipant = config.getAscendParticipant();
+        this.participant = participant;
     }
 
     void emit(String key) {
         String url = getEventUrl(key, 1.0);
-        if (url != null) {
-            httpClient.get(url);
-        }
+        makeEventRequest(url);
     }
 
     void emit(String key, Double score) {
         String url = getEventUrl(key, score);
-        if (url != null) {
-            httpClient.get(url);
-        }
+        makeEventRequest(url);
     }
 
     void confirm(JsonArray allocations) {
@@ -51,14 +49,16 @@ class EventEmitter {
 
     void sendAllocationEvents(String key, JsonArray allocations) {
         for (JsonElement a : allocations) {
-            JsonObject allocation = a.getAsJsonObject();
-            String experimentId = allocation.get("eid").getAsString();
-            String candidateId = allocation.get("cid").getAsString();
+            if (!audience.filter(participant.getUserAttributes(), a.getAsJsonObject())) {
+                JsonObject allocation = a.getAsJsonObject();
+                String experimentId = allocation.get("eid").getAsString();
+                String candidateId = allocation.get("cid").getAsString();
 
-            String url = getEventUrl(key, experimentId, candidateId);
-            if (url != null) {
-                httpClient.get(url);
+                String url = getEventUrl(key, experimentId, candidateId);
+                makeEventRequest(url);
+                continue;
             }
+            LOGGER.debug(String.format("%s event filtered.", key));
         }
     }
 
@@ -68,8 +68,8 @@ class EventEmitter {
                     config.getVersion(),
                     config.getEnvironmentId());
             String queryString = String.format("uid=%s&sid=%s&type=%s&score=%s",
-                    ascendParticipant.getUserId(),
-                    ascendParticipant.getSessionId(), type, score.toString());
+                    participant.getUserId(),
+                    participant.getSessionId(), type, score.toString());
 
             URI uri = new URI(config.getHttpScheme(), null, path, queryString,
                     null);
@@ -78,7 +78,7 @@ class EventEmitter {
 
             return url.toString();
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            LOGGER.error("There was an error while creating the events url.", e);
             return null;
         }
     }
@@ -89,8 +89,8 @@ class EventEmitter {
                     config.getVersion(),
                     config.getEnvironmentId());
             String queryString = String.format("uid=%s&sid=%s&eid=%s&cid=%s&type=%s",
-                    ascendParticipant.getUserId(),
-                    ascendParticipant.getSessionId(), experimentId, candidateId, type);
+                    participant.getUserId(),
+                    participant.getSessionId(), experimentId, candidateId, type);
 
             URI uri = new URI(config.getHttpScheme(), null, path, queryString,
                     null);
@@ -99,8 +99,21 @@ class EventEmitter {
 
             return url.toString();
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            LOGGER.error("There was an error while creating the events url.", e);
             return null;
+        }
+    }
+
+    private void makeEventRequest(String url) {
+        if (url != null) {
+            try {
+                httpClient.get(url);
+            } catch (Exception e) {
+                LOGGER.error(String.format("There was an exception while making" +
+                        " an event request with %s", url), e);
+            }
+        } else {
+            LOGGER.debug("The event url was null, skipping event request.");
         }
     }
 

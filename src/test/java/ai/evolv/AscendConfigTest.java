@@ -35,8 +35,6 @@ public class AscendConfigTest {
         Assert.assertEquals(AscendConfig.DEFAULT_HTTP_SCHEME, config.getHttpScheme());
         Assert.assertEquals(AscendConfig.DEFAULT_DOMAIN, config.getDomain());
         Assert.assertEquals(AscendConfig.DEFAULT_API_VERSION, config.getVersion());
-        Assert.assertEquals(AscendConfig.DEFAULT_ALLOCATION_STORE, config.getAscendAllocationStore());
-        Assert.assertEquals(AscendConfig.DEFAULT_ASCEND_PARTICIPANT, config.getAscendParticipant());
         Assert.assertEquals(AscendConfig.DEFAULT_HTTP_SCHEME, config.getHttpScheme());
         Assert.assertEquals(mockHttpClient, config.getHttpClient());
         Assert.assertNotNull(config.getExecutionQueue());
@@ -47,8 +45,8 @@ public class AscendConfigTest {
         long timeout = 1;
         String domain = "test.evolv.ai";
         String version = "test";
-        AscendAllocationStore allocationStore = new DefaultAscendAllocationStore();
-        AscendParticipant participant = new AscendParticipant.Builder().build();
+        AscendAllocationStore allocationStore = new DefaultAllocationStore(10);
+        AscendParticipant participant = AscendParticipant.builder().build();
         String httpScheme = "test";
 
         AscendConfig config = AscendConfig.builder(ENVIRONMENT_ID, mockHttpClient)

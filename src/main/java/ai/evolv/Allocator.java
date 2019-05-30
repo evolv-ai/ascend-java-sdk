@@ -1,7 +1,5 @@
 package ai.evolv;
 
-import ai.evolv.exceptions.AscendRuntimeException;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 
@@ -15,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 class Allocator {
 
-    private static Logger logger = LoggerFactory.getLogger(Allocator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Allocator.class);
 
     enum AllocationStatus {
         FETCHING, RETRIEVED, FAILED
@@ -24,7 +22,7 @@ class Allocator {
     private final ExecutionQueue executionQueue;
     private final AscendAllocationStore store;
     private final AscendConfig config;
-    private final AscendParticipant ascendParticipant;
+    private final AscendParticipant participant;
     private final EventEmitter eventEmitter;
     private final HttpClient httpClient;
 
@@ -33,14 +31,14 @@ class Allocator {
 
     private AllocationStatus allocationStatus;
 
-    Allocator(AscendConfig config) {
+    Allocator(AscendConfig config, AscendParticipant participant) {
         this.executionQueue = config.getExecutionQueue();
         this.store = config.getAscendAllocationStore();
         this.config = config;
-        this.ascendParticipant = config.getAscendParticipant();
+        this.participant = participant;
         this.httpClient = config.getHttpClient();
         this.allocationStatus = AllocationStatus.FETCHING;
-        this.eventEmitter = new EventEmitter(config);
+        this.eventEmitter = new EventEmitter(config, participant);
 
     }
 
@@ -61,14 +59,14 @@ class Allocator {
             String path = String.format("//%s/%s/%s/allocations", config.getDomain(),
                     config.getVersion(),
                     config.getEnvironmentId());
-            String queryString = String.format("uid=%s&sid=%s", ascendParticipant.getUserId(),
-                    ascendParticipant.getSessionId());
+            String queryString = String.format("uid=%s&sid=%s", participant.getUserId(),
+                    participant.getSessionId());
             URI uri = new URI(config.getHttpScheme(), null, path, queryString, null);
             URL url = uri.toURL();
 
             return url.toString();
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            LOGGER.error("There was an issue creating the allocations url.", e);
             return "";
         }
     }
@@ -80,12 +78,12 @@ class Allocator {
             JsonParser parser = new JsonParser();
             JsonArray allocations = parser.parse(responseBody).getAsJsonArray();
 
-            JsonArray previousAllocations = store.get();
+            JsonArray previousAllocations = store.get(participant.getUserId());
             if (allocationsNotEmpty(previousAllocations)) {
                 allocations = Allocations.reconcileAllocations(previousAllocations, allocations);
             }
 
-            store.put(allocations);
+            store.put(participant.getUserId(), allocations);
             allocationStatus = AllocationStatus.RETRIEVED;
 
             if (confirmationSandbagged) {
@@ -96,60 +94,40 @@ class Allocator {
                 eventEmitter.contaminate(allocations);
             }
 
-            // could throw an exception due to customer's action logic
-            try {
-                executionQueue.executeAllWithValuesFromAllocations(allocations);
-            } catch (Exception e) {
-                throw new AscendRuntimeException(e);
-            }
+            executionQueue.executeAllWithValuesFromAllocations(allocations);
 
             return allocations;
-        }).handle((result, ex) -> {
-            if (ex != null && ex.getCause() instanceof AscendRuntimeException) {
-                // surface any customer implementation errors
-                logger.error(ex.getCause().getCause().toString());
-                return result;
-            } else if (ex != null && result == null) {
-                return resolveAllocationFailure();
-            } else {
-                return result;
-            }
+        }).exceptionally(e -> {
+            LOGGER.error("There was an exception while retrieving allocations.", e);
+            return resolveAllocationFailure();
         });
     }
 
     JsonArray resolveAllocationFailure() {
-        logger.warn("There was an error while making an allocation request.");
-
-        JsonArray allocations = store.get();
-        if (allocationsNotEmpty(allocations)) {
-            logger.warn("Falling back to participant's previous allocation.");
-
+        JsonArray previousAllocations = store.get(participant.getUserId());
+        if (allocationsNotEmpty(previousAllocations)) {
+            LOGGER.debug("Falling back to participant's previous allocation.");
             if (confirmationSandbagged) {
-                eventEmitter.confirm(allocations);
+                eventEmitter.confirm(previousAllocations);
             }
 
             if (contaminationSandbagged) {
-                eventEmitter.contaminate(allocations);
+                eventEmitter.contaminate(previousAllocations);
             }
 
             allocationStatus = AllocationStatus.RETRIEVED;
-            executionQueue.executeAllWithValuesFromAllocations(allocations);
+            executionQueue.executeAllWithValuesFromAllocations(previousAllocations);
         } else {
-            logger.warn("Falling back to the supplied defaults.");
-
+            LOGGER.debug("Falling back to the supplied defaults.");
             allocationStatus = AllocationStatus.FAILED;
             executionQueue.executeAllWithValuesFromDefaults();
-
-            allocations = new JsonArray();
+            previousAllocations = new JsonArray();
         }
 
-        return allocations;
+        return previousAllocations;
     }
 
     static boolean allocationsNotEmpty(JsonArray allocations) {
         return allocations != null && allocations.size() > 0;
     }
-
-
-
 }

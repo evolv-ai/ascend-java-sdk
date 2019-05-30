@@ -15,7 +15,12 @@ import org.asynchttpclient.HttpResponseBodyPart;
 import org.asynchttpclient.HttpResponseHeaders;
 import org.asynchttpclient.HttpResponseStatus;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class AsyncHttpClient implements HttpClient {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AsyncHttpClient.class);
 
     protected final org.asynchttpclient.AsyncHttpClient httpClient;
 

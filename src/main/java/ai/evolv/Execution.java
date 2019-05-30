@@ -13,13 +13,15 @@ class Execution<T> {
     private final String key;
     private final T defaultValue;
     private final AscendAction function;
+    private final AscendParticipant participant;
 
     private Set<String> alreadyExecuted = new HashSet<>();
 
-    Execution(String key, T defaultValue, AscendAction<T> function) {
+    Execution(String key, T defaultValue, AscendAction<T> function, AscendParticipant participant) {
         this.key = key;
         this.defaultValue = defaultValue;
         this.function = function;
+        this.participant = participant;
     }
 
     String getKey() {
@@ -29,7 +31,11 @@ class Execution<T> {
     void executeWithAllocation(JsonArray rawAllocations) throws AscendKeyError {
         GenericClass<T> cls = new GenericClass(defaultValue.getClass());
         Allocations allocations = new Allocations(rawAllocations);
-        T value = allocations.getValueFromGenome(key, cls.getMyType());
+        T value = allocations.getValueFromAllocations(key, cls.getMyType(), participant);
+
+        if (value == null) {
+            throw new AscendKeyError("Got null when retrieving key from allocations.");
+        }
 
         Set<String> activeExperiments = allocations.getActiveExperiments();
         if (alreadyExecuted.isEmpty() || !alreadyExecuted.equals(activeExperiments)) {

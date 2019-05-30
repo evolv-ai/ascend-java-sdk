@@ -13,8 +13,13 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class OkHttpClient implements HttpClient {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(OkHttpClient.class);
 
     protected final okhttp3.OkHttpClient httpClient;
 

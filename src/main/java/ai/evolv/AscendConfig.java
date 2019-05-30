@@ -5,31 +5,29 @@ public class AscendConfig {
     static final String DEFAULT_HTTP_SCHEME = "https";
     static final String DEFAULT_DOMAIN = "participants.evolv.ai";
     static final String DEFAULT_API_VERSION = "v1";
-    static final AscendAllocationStore DEFAULT_ALLOCATION_STORE =
-            new DefaultAscendAllocationStore();
-    static final AscendParticipant DEFAULT_ASCEND_PARTICIPANT =
-            new AscendParticipant.Builder().build();
+
+    private static final int DEFAULT_ALLOCATION_STORE_SIZE = 1000;
 
     private final String httpScheme;
     private final String domain;
     private final String version;
     private final String environmentId;
     private final AscendAllocationStore ascendAllocationStore;
-    private final AscendParticipant ascendParticipant;
+    private final AscendParticipant participant;
     private final HttpClient httpClient;
     private final ExecutionQueue executionQueue;
 
     private AscendConfig(String httpScheme, String domain, String version,
                          String environmentId,
                          AscendAllocationStore ascendAllocationStore,
-                         AscendParticipant ascendParticipant,
+                         AscendParticipant participant,
                          HttpClient httpClient) {
         this.httpScheme = httpScheme;
         this.domain = domain;
         this.version = version;
         this.environmentId = environmentId;
         this.ascendAllocationStore = ascendAllocationStore;
-        this.ascendParticipant = ascendParticipant;
+        this.participant = participant;
         this.httpClient = httpClient;
         this.executionQueue = new ExecutionQueue();
     }
@@ -59,7 +57,7 @@ public class AscendConfig {
     }
 
     AscendParticipant getAscendParticipant() {
-        return ascendParticipant;
+        return participant;
     }
 
     HttpClient getHttpClient() {
@@ -72,11 +70,12 @@ public class AscendConfig {
 
     public static class Builder {
 
+        private int allocationStoreSize = DEFAULT_ALLOCATION_STORE_SIZE;
         private String httpScheme = DEFAULT_HTTP_SCHEME;
         private String domain = DEFAULT_DOMAIN;
         private String version = DEFAULT_API_VERSION;
-        private AscendAllocationStore ascendAllocationStore = DEFAULT_ALLOCATION_STORE;
-        private AscendParticipant ascendParticipant = DEFAULT_ASCEND_PARTICIPANT;
+        private AscendAllocationStore allocationStore;
+        private AscendParticipant participant;
 
         private String environmentId;
         private HttpClient httpClient;
@@ -117,21 +116,26 @@ public class AscendConfig {
         /**
          * Sets up a custom AscendAllocationStore. Store needs to implement the
          * AscendAllocationStore interface.
-         * @param ascendAllocationStore a custom built allocation store
+         * @param allocationStore a custom built allocation store
          * @return AscendClientBuilder class
          */
-        public Builder setAscendAllocationStore(AscendAllocationStore ascendAllocationStore) {
-            this.ascendAllocationStore = ascendAllocationStore;
+        public Builder setAscendAllocationStore(AscendAllocationStore allocationStore) {
+            this.allocationStore = allocationStore;
             return this;
         }
 
         /**
          * Sets up a custom AscendParticipant.
-         * @param ascendParticipant a custom build ascendParticipant
+         *
+         * @deprecated use {@link ai.evolv.AscendClientFactory} init method with AscendConfig
+         *      and AscendParticipant params instead.
+         *
+         * @param participant a custom build ascendParticipant
          * @return AscendClientBuilder class
          */
-        public Builder setAscendParticipant(AscendParticipant ascendParticipant) {
-            this.ascendParticipant = ascendParticipant;
+        @Deprecated
+        public Builder setAscendParticipant(AscendParticipant participant) {
+            this.participant = participant;
             return this;
         }
 
@@ -146,12 +150,28 @@ public class AscendConfig {
         }
 
         /**
+         * Sets the DefaultAllocationStores size.
+         * @param size number of entries allowed in the default allocation store
+         * @return AscendClientBuilder class
+         */
+        public Builder setDefaultAllocationStoreSize(int size) {
+            this.allocationStoreSize = size;
+            return this;
+        }
+
+        /**
          * Builds an instance of AscendClientImpl.
          * @return an AscendClientImpl instance
          */
         public AscendConfig build() {
-            return new AscendConfig(httpScheme, domain, version,
-                    environmentId, ascendAllocationStore, ascendParticipant, httpClient);
+            if (allocationStore == null) {
+                allocationStore = new DefaultAllocationStore(allocationStoreSize);
+            }
+
+            return new AscendConfig(httpScheme, domain, version, environmentId,
+                    allocationStore,
+                    participant,
+                    httpClient);
         }
 
     }

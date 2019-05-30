@@ -10,17 +10,19 @@ public interface AscendAllocationStore {
      *     Retrieves a JsonArray that represents the participant's allocations.
      *     If there are no stored allocations, should return an empty JsonArray.
      * </p>
-     * @return a participant's allocations
+     * @param uid the participant's unique id
+     * @return an allocation if one exists else an empty JsonArray
      */
-    JsonArray get();
+    JsonArray get(String uid);
 
     /**
      * Stores a JsonArray.
      * <p>
      *     Stores the given JsonArray.
      * </p>
-     * @param allocations a participant's allocations
+     * @param uid the participant's unique id
+     * @param allocations the participant's allocations
      */
-    void put(JsonArray allocations);
+    void put(String uid, JsonArray allocations);
 
 }

@@ -24,39 +24,17 @@ public class AllocationsTest {
         return parser.parse(raw).getAsJsonArray();
     }
 
-    @Test
-    public void testGetGenomeFromAllocation() {
-        Allocations allocations = new Allocations(parseRawAllocations(rawAllocation));
-        String genome = allocations.getGenomeFromAllocations().toString();
-        String expectedGenome = "{\"genome\":{\"search\":{\"weighting\":{\"distance\":2.5,\"dealer_score\":2.5}},\"pages\":{\"all_pages\":{\"header_footer\":[\"blue\",\"white\"]},\"testing_page\":{\"megatron\":\"none\",\"header\":\"white\"}},\"algorithms\":{\"feature_importance\":false}}}";
-        Assert.assertEquals(expectedGenome, genome);
-    }
-
-    @Test
-    public void testGetGenomeFromMultAllocation() {
-        Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocation));
-        String genome = allocations.getGenomeFromAllocations().toString();
-        String expectedGenome = "{\"genome\":{\"search\":{\"weighting\":{\"distance\":2.5,\"dealer_score\":2.5}},\"pages\":{\"all_pages\":{\"header_footer\":[\"blue\",\"white\"]},\"testing_page\":{\"megatron\":\"none\",\"header\":\"white\"}},\"algorithms\":{\"feature_importance\":false}," +
-                "\"best\":{\"baked\":{\"cookie\":true,\"cake\":false}},\"utensils\":{\"knives\":{\"drawer\":[\"butcher\",\"paring\"]},\"spoons\":{\"wooden\":\"oak\",\"metal\":\"steel\"}},\"measure\":{\"cups\":2.0}}}";
-        Assert.assertEquals(expectedGenome, genome);
-    }
-
-    @Test
-    public void testGetGenomeFromMultAllocationWithDuplicateKeys() {
-        Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocationWithDups));
-        String genome = allocations.getGenomeFromAllocations().toString();
-        String expectedGenome = "{\"genome\":{\"search\":{\"weighting\":{\"distance\":2.5,\"dealer_score\":2.5}},\"pages\":{\"all_pages\":{\"header_footer\":[\"blue\",\"white\"]},\"testing_page\":{\"megatron\":\"none\",\"header\":\"white\"}},\"algorithms\":{\"feature_importance\":true}," +
-                "\"best\":{\"baked\":{\"cookie\":true,\"cake\":false}},\"utensils\":{\"knives\":{\"drawer\":[\"butcher\",\"paring\"]},\"spoons\":{\"wooden\":\"oak\",\"metal\":\"steel\"}}}}";
-        Assert.assertEquals(expectedGenome, genome);
-    }
 
     @Test
     public void testGetValueFromAllocationGenome() {
         try {
+            AscendParticipant participant = AscendParticipant.builder().build();
             Allocations allocations = new Allocations(parseRawAllocations(rawAllocation));
-            Boolean featureImportance = allocations.getValueFromGenome("algorithms.feature_importance", Boolean.class);
+            Boolean featureImportance = allocations.getValueFromAllocations("algorithms.feature_importance",
+                    Boolean.class, participant);
             Assert.assertEquals(featureImportance, false);
-            double weightingDistance = allocations.getValueFromGenome("search.weighting.distance", double.class);
+            double weightingDistance = allocations.getValueFromAllocations("search.weighting.distance",
+                    double.class, participant);
             Assert.assertEquals(weightingDistance, 2.5, 0);
         } catch (AscendKeyError e) {
             Assert.fail(e.getMessage());
@@ -66,10 +44,13 @@ public class AllocationsTest {
     @Test
     public void testGetValueFromMultiAllocationGenome() {
         try {
+            AscendParticipant participant = AscendParticipant.builder().build();
             Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocation));
-            Boolean featureImportance = allocations.getValueFromGenome("algorithms.feature_importance", Boolean.class);
+            Boolean featureImportance = allocations.getValueFromAllocations("algorithms.feature_importance",
+                    Boolean.class, participant);
             Assert.assertEquals(featureImportance, false);
-            double weightingDistance = allocations.getValueFromGenome("search.weighting.distance", double.class);
+            double weightingDistance = allocations.getValueFromAllocations("search.weighting.distance",
+                    double.class, participant);
             Assert.assertEquals(weightingDistance, 2.5, 0);
         } catch (AscendKeyError e) {
             Assert.fail(e.getMessage());
@@ -79,10 +60,13 @@ public class AllocationsTest {
     @Test
     public void testGetValueFromMultiAllocationWithDupsGenome() {
         try{
+            AscendParticipant participant = AscendParticipant.builder().build();
             Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocationWithDups));
-            Boolean featureImportance = allocations.getValueFromGenome("algorithms.feature_importance", Boolean.class);
-            Assert.assertEquals(featureImportance, true);
-            double weightingDistance = allocations.getValueFromGenome("search.weighting.distance", double.class);
+            Boolean featureImportance = allocations.getValueFromAllocations("algorithms.feature_importance",
+                    Boolean.class, participant);
+            Assert.assertFalse(featureImportance);
+            double weightingDistance = allocations.getValueFromAllocations("search.weighting.distance",
+                    double.class, participant);
             Assert.assertEquals(weightingDistance, 2.5, 0);
         } catch (AscendKeyError e) {
             Assert.fail(e.getMessage());

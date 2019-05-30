@@ -19,16 +19,21 @@ class AscendClientImpl implements AscendClient {
     private final Allocator allocator;
     private final AscendAllocationStore store;
     private final boolean previousAllocations;
+    private final AscendParticipant participant;
 
-    AscendClientImpl(AscendConfig config, EventEmitter emitter,
-                     CompletableFuture<JsonArray> allocations, Allocator allocator,
-                     boolean previousAllocations) {
+    AscendClientImpl(AscendConfig config,
+                     EventEmitter emitter,
+                     CompletableFuture<JsonArray> futureAllocations,
+                     Allocator allocator,
+                     boolean previousAllocations,
+                     AscendParticipant participant) {
         this.store = config.getAscendAllocationStore();
         this.executionQueue = config.getExecutionQueue();
         this.eventEmitter = emitter;
-        this.futureAllocations = allocations;
+        this.futureAllocations = futureAllocations;
         this.allocator = allocator;
         this.previousAllocations = previousAllocations;
+        this.participant = participant;
     }
 
     @Override
@@ -45,9 +50,20 @@ class AscendClientImpl implements AscendClient {
             }
 
             GenericClass<T> cls = new GenericClass(defaultValue.getClass());
-            return new Allocations(allocations).getValueFromGenome(key, cls.getMyType());
+            T value = new Allocations(allocations).getValueFromAllocations(key, cls.getMyType(),
+                    participant);
+
+            if (value == null) {
+                throw new AscendKeyError("Got null when retrieving key from allocations.");
+            }
+
+            return value;
+        } catch (AscendKeyError e) {
+            LOGGER.debug("Unable to retrieve the treatment. Returning " +
+                    "the default.", e);
+            return defaultValue;
         } catch (Exception e) {
-            LOGGER.error("There was as error retrieving the requested value. Returning " +
+            LOGGER.error("An error occurred while retrieving the treatment. Returning " +
                     "the default.", e);
             return defaultValue;
         }
@@ -55,15 +71,17 @@ class AscendClientImpl implements AscendClient {
 
     @Override
     public <T> void subscribe(String key, T defaultValue, AscendAction<T> function) {
-        Execution execution = new Execution<>(key, defaultValue, function);
+        Execution execution = new Execution<>(key, defaultValue, function, participant);
         if (previousAllocations) {
             try {
-                JsonArray allocations = store.get();
+                JsonArray allocations = store.get(participant.getUserId());
                 execution.executeWithAllocation(allocations);
             } catch (AscendKeyError e) {
-                LOGGER.warn("There was an error retrieving the value of %s from the allocation.",
+                LOGGER.debug("Unable to retrieve the value of %s from the allocation.",
                         execution.getKey());
                 execution.executeWithDefault();
+            } catch (Exception e) {
+                LOGGER.error("There was an error when applying the stored treatment.", e);
             }
         }
 
@@ -73,12 +91,14 @@ class AscendClientImpl implements AscendClient {
             return;
         } else if (allocationStatus == Allocator.AllocationStatus.RETRIEVED) {
             try {
-                JsonArray allocations = store.get();
+                JsonArray allocations = store.get(participant.getUserId());
                 execution.executeWithAllocation(allocations);
                 return;
             } catch (AscendKeyError e) {
-                LOGGER.warn("There was an error retrieving the value of %s from the allocation.",
-                        execution.getKey());
+                LOGGER.debug(String.format("Unable to retrieve" +
+                        " the value of %s from the allocation.",  execution.getKey()), e);
+            } catch (Exception e) {
+                LOGGER.error("There was an error applying the subscribed method.", e);
             }
         }
 
@@ -101,7 +121,7 @@ class AscendClientImpl implements AscendClient {
         if (allocationStatus == Allocator.AllocationStatus.FETCHING) {
             allocator.sandBagConfirmation();
         } else if (allocationStatus == Allocator.AllocationStatus.RETRIEVED) {
-            eventEmitter.confirm(store.get());
+            eventEmitter.confirm(store.get(participant.getUserId()));
         }
     }
 
@@ -111,7 +131,7 @@ class AscendClientImpl implements AscendClient {
         if (allocationStatus == Allocator.AllocationStatus.FETCHING) {
             allocator.sandBagContamination();
         } else if (allocationStatus == Allocator.AllocationStatus.RETRIEVED) {
-            eventEmitter.contaminate(store.get());
+            eventEmitter.contaminate(store.get(participant.getUserId()));
         }
     }
 }
