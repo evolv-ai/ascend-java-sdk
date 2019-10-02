@@ -53,7 +53,7 @@ public class AscendClientFactory {
         CompletableFuture<JsonArray> futureAllocations = allocator.fetchAllocations();
 
         return new AscendClientImpl(config,
-                new EventEmitter(config, participant),
+                new EventEmitter(config, participant, store),
                 futureAllocations,
                 allocator,
                 reconciliationNeeded,

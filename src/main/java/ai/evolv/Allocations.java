@@ -18,14 +18,20 @@ import org.slf4j.LoggerFactory;
 
 class Allocations {
 
+    private static final String TOUCHED = "touched";
+    private static final String CONFIRMED = "confirmed";
+    private static final String CONTAMINATED = "contaminated";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(Allocations.class);
 
     private final JsonArray allocations;
+    private final AscendAllocationStore store;
 
     private final Audience audience = new Audience();
 
-    Allocations(JsonArray allocations) {
+    Allocations(JsonArray allocations, AscendAllocationStore store) {
         this.allocations = allocations;
+        this.store = store;
     }
 
     <T> T getValueFromAllocations(String key, Class<T> cls, AscendParticipant participant)
@@ -40,10 +46,17 @@ class Allocations {
             if (!audience.filter(participant.getUserAttributes(), allocation)) {
                 try {
                     JsonElement element = getElementFromGenome(allocation.get("genome"), keyParts);
-                    return new Gson().fromJson(element, cls);
+                    T value = new Gson().fromJson(element, cls);
+                    if (value != null) {
+                        LOGGER.debug(String.format("Found value for key '%s' in experiment %s",
+                                key, allocation.get("eid").getAsString()));
+                        markTouched(allocation);
+                        store.put(participant.getUserId(), allocations);
+                    }
+                    return value;
                 } catch (AscendKeyError e) {
-                    LOGGER.debug(String.format("Unable to find key %s in experiment %s.",
-                            keyParts.toString(), allocation.get("eid").getAsString()), e);
+                    LOGGER.debug(String.format("Unable to find key '%s' in experiment %s.",
+                            key, allocation.get("eid").getAsString()));
                     continue;
                 }
             }
@@ -122,5 +135,35 @@ class Allocations {
             activeExperiments.add(allocation.get("eid").getAsString());
         }
         return activeExperiments;
+    }
+
+    static JsonObject markTouched(JsonObject allocation) {
+        allocation.addProperty(TOUCHED, true);
+        return allocation;
+    }
+
+    static boolean isTouched(JsonObject allocation) {
+        return allocation.has(TOUCHED) &&
+                allocation.get(TOUCHED).getAsBoolean();
+    }
+
+    static JsonObject markConfirmed(JsonObject allocation) {
+        allocation.addProperty(CONFIRMED, true);
+        return allocation;
+    }
+
+    static boolean isConfirmed(JsonObject allocation) {
+        return allocation.has(CONFIRMED) &&
+                allocation.get(CONFIRMED).getAsBoolean();
+    }
+
+    static JsonObject markContaminated(JsonObject allocation) {
+        allocation.addProperty(CONTAMINATED, true);
+        return allocation;
+    }
+
+    static boolean isContaminated(JsonObject allocation) {
+        return allocation.has(CONTAMINATED) &&
+                allocation.get(CONTAMINATED).getAsBoolean();
     }
 }

@@ -50,11 +50,12 @@ class AscendClientImpl implements AscendClient {
             }
 
             GenericClass<T> cls = new GenericClass(defaultValue.getClass());
-            T value = new Allocations(allocations).getValueFromAllocations(key, cls.getMyType(),
-                    participant);
+            T value = new Allocations(allocations, store).getValueFromAllocations(key,
+                    cls.getMyType(), participant);
 
             if (value == null) {
-                throw new AscendKeyError("Got null when retrieving key from allocations.");
+                throw new AscendKeyError("Got null when retrieving key " +
+                        "from allocations.");
             }
 
             return value;
@@ -71,7 +72,7 @@ class AscendClientImpl implements AscendClient {
 
     @Override
     public <T> void subscribe(String key, T defaultValue, AscendAction<T> function) {
-        Execution execution = new Execution<>(key, defaultValue, function, participant);
+        Execution execution = new Execution<>(key, defaultValue, function, participant, store);
         if (previousAllocations) {
             try {
                 JsonArray allocations = store.get(participant.getUserId());

@@ -38,7 +38,7 @@ class Allocator {
         this.participant = participant;
         this.httpClient = config.getHttpClient();
         this.allocationStatus = AllocationStatus.FETCHING;
-        this.eventEmitter = new EventEmitter(config, participant);
+        this.eventEmitter = new EventEmitter(config, participant, this.store);
 
     }
 
@@ -86,15 +86,8 @@ class Allocator {
             store.put(participant.getUserId(), allocations);
             allocationStatus = AllocationStatus.RETRIEVED;
 
-            if (confirmationSandbagged) {
-                eventEmitter.confirm(allocations);
-            }
-
-            if (contaminationSandbagged) {
-                eventEmitter.contaminate(allocations);
-            }
-
-            executionQueue.executeAllWithValuesFromAllocations(allocations);
+            executionQueue.executeAllWithValuesFromAllocations(allocations,
+                eventEmitter, confirmationSandbagged, contaminationSandbagged);
 
             return allocations;
         }).exceptionally(e -> {
@@ -107,16 +100,9 @@ class Allocator {
         JsonArray previousAllocations = store.get(participant.getUserId());
         if (allocationsNotEmpty(previousAllocations)) {
             LOGGER.debug("Falling back to participant's previous allocation.");
-            if (confirmationSandbagged) {
-                eventEmitter.confirm(previousAllocations);
-            }
-
-            if (contaminationSandbagged) {
-                eventEmitter.contaminate(previousAllocations);
-            }
-
             allocationStatus = AllocationStatus.RETRIEVED;
-            executionQueue.executeAllWithValuesFromAllocations(previousAllocations);
+            executionQueue.executeAllWithValuesFromAllocations(previousAllocations,
+                    eventEmitter, confirmationSandbagged, contaminationSandbagged);
         } else {
             LOGGER.debug("Falling back to the supplied defaults.");
             allocationStatus = AllocationStatus.FAILED;

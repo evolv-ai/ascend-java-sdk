@@ -15,7 +15,7 @@
         <dependency>
           <groupId>ai.evolv</groupId>
           <artifactId>ascend-sdk</artifactId>
-          <version>0.7.0</version>
+          <version>0.7.1</version>
         </dependency>
     ```
 
@@ -40,8 +40,7 @@
     ```java
        ascendClient.confirm();
     ```
-    *Note: After the AscendClient has initialized, it is important to confirm the participant into the experiment. This action
-     records the participant's allocation and sends the info back to Ascend.*
+    *Note: This action records the participant's allocation and sends the info back to Ascend.*
 
 ### Value Retrieval
 

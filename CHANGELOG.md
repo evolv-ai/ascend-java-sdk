@@ -3,6 +3,11 @@
 
 All updates that affect the released version of the Ascend Java Client will be detailed here. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [0.7.1-beta] - 2019-10-02
+### Added
+- confirmations/contaminations are now only sent when the allocation is used
+- improved logging messages
+
 ## [0.7.0-beta] - 2019-05-29
 ### Fixed 
 - Participant's now initialize with the client instead of getting reused like before.

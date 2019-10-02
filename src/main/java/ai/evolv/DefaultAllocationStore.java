@@ -6,7 +6,7 @@ public class DefaultAllocationStore implements AscendAllocationStore {
 
     private LruCache cache;
 
-    DefaultAllocationStore(int size) {
+    public DefaultAllocationStore(int size) {
         this.cache = new LruCache(size);
     }
 

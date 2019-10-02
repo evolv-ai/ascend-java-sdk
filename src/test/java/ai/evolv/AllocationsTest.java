@@ -29,7 +29,8 @@ public class AllocationsTest {
     public void testGetValueFromAllocationGenome() {
         try {
             AscendParticipant participant = AscendParticipant.builder().build();
-            Allocations allocations = new Allocations(parseRawAllocations(rawAllocation));
+            Allocations allocations = new Allocations(parseRawAllocations(rawAllocation),
+                    new DefaultAllocationStore(10));
             Boolean featureImportance = allocations.getValueFromAllocations("algorithms.feature_importance",
                     Boolean.class, participant);
             Assert.assertEquals(featureImportance, false);
@@ -45,7 +46,8 @@ public class AllocationsTest {
     public void testGetValueFromMultiAllocationGenome() {
         try {
             AscendParticipant participant = AscendParticipant.builder().build();
-            Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocation));
+            Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocation),
+                    new DefaultAllocationStore(10));
             Boolean featureImportance = allocations.getValueFromAllocations("algorithms.feature_importance",
                     Boolean.class, participant);
             Assert.assertEquals(featureImportance, false);
@@ -61,7 +63,8 @@ public class AllocationsTest {
     public void testGetValueFromMultiAllocationWithDupsGenome() {
         try{
             AscendParticipant participant = AscendParticipant.builder().build();
-            Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocationWithDups));
+            Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocationWithDups),
+                    new DefaultAllocationStore(10));
             Boolean featureImportance = allocations.getValueFromAllocations("algorithms.feature_importance",
                     Boolean.class, participant);
             Assert.assertFalse(featureImportance);
@@ -75,7 +78,8 @@ public class AllocationsTest {
 
     @Test
     public void testGetActiveExperiments() {
-        Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocation));
+        Allocations allocations = new Allocations(parseRawAllocations(rawMultiAllocation),
+                new DefaultAllocationStore(10));
         Set<String> activeExperiments = allocations.getActiveExperiments();
         Set<String> expected = new HashSet<>();
         expected.add("test_eid");

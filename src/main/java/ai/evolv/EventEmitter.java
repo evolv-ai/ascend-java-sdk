@@ -20,13 +20,15 @@ class EventEmitter {
     private final HttpClient httpClient;
     private final AscendConfig config;
     private final AscendParticipant participant;
+    private final AscendAllocationStore store;
 
     private final Audience audience = new Audience();
 
-    EventEmitter(AscendConfig config, AscendParticipant participant) {
+    EventEmitter(AscendConfig config, AscendParticipant participant, AscendAllocationStore store) {
         this.httpClient = config.getHttpClient();
         this.config = config;
         this.participant = participant;
+        this.store = store;
     }
 
     void emit(String key) {
@@ -49,17 +51,29 @@ class EventEmitter {
 
     void sendAllocationEvents(String key, JsonArray allocations) {
         for (JsonElement a : allocations) {
-            if (!audience.filter(participant.getUserAttributes(), a.getAsJsonObject())) {
-                JsonObject allocation = a.getAsJsonObject();
+            JsonObject allocation = a.getAsJsonObject();
+            if (!audience.filter(participant.getUserAttributes(), allocation)
+                    && Allocations.isTouched(allocation)
+                    && !Allocations.isConfirmed(allocation)
+                    && !Allocations.isContaminated(allocation)) {
                 String experimentId = allocation.get("eid").getAsString();
                 String candidateId = allocation.get("cid").getAsString();
 
                 String url = getEventUrl(key, experimentId, candidateId);
                 makeEventRequest(url);
+
+                if (key.equals(CONFIRM_KEY)) {
+                    Allocations.markConfirmed(allocation);
+                } else if (key.equals(CONTAMINATE_KEY)) {
+                    Allocations.markContaminated(allocation);
+                }
+
                 continue;
             }
-            LOGGER.debug(String.format("%s event filtered.", key));
+            LOGGER.debug(String.format("%s event filtered for experiment %s.", key,
+                    allocation.get("eid").getAsString()));
         }
+        store.put(this.participant.getUserId(), allocations);
     }
 
     String getEventUrl(String type, Double score) {

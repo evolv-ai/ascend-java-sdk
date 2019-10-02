@@ -23,7 +23,10 @@ class ExecutionQueue {
         this.queue.add(execution);
     }
 
-    void executeAllWithValuesFromAllocations(JsonArray allocations) {
+    void executeAllWithValuesFromAllocations(JsonArray allocations,
+                                             EventEmitter eventEmitter,
+                                             boolean confirmationSandbagged,
+                                             boolean contaminationSandbagged) {
         while (!queue.isEmpty()) {
             Execution execution = queue.remove();
             try {
@@ -36,6 +39,14 @@ class ExecutionQueue {
                 LOGGER.error("There was an issue while performing one of" +
                         " the stored actions.", e);
             }
+        }
+
+        if (confirmationSandbagged) {
+            eventEmitter.confirm(allocations);
+        }
+
+        if (contaminationSandbagged) {
+            eventEmitter.contaminate(allocations);
         }
     }
 

@@ -19,7 +19,7 @@ public class EventEmitterTest {
     private static final double score = 10.0;
     private static final String eid = "test_eid";
     private static final String cid = "test_cid";
-    private static final String rawAllocation = "[{\"uid\":\"test_uid\",\"sid\":\"test_sid\",\"eid\":\"test_eid\",\"cid\":\"test_cid\",\"genome\":{\"search\":{\"weighting\":{\"distance\":2.5,\"dealer_score\":2.5}},\"pages\":{\"all_pages\":{\"header_footer\":[\"blue\",\"white\"]},\"testing_page\":{\"megatron\":\"none\",\"header\":\"white\"}},\"algorithms\":{\"feature_importance\":false}},\"excluded\":false}]";
+    private static final String rawAllocation = "[{\"uid\":\"test_uid\",\"sid\":\"test_sid\",\"eid\":\"test_eid\",\"cid\":\"test_cid\",\"touched\":true,\"genome\":{\"search\":{\"weighting\":{\"distance\":2.5,\"dealer_score\":2.5}},\"pages\":{\"all_pages\":{\"header_footer\":[\"blue\",\"white\"]},\"testing_page\":{\"megatron\":\"none\",\"header\":\"white\"}},\"algorithms\":{\"feature_importance\":false}},\"excluded\":false}]";
 
     @Mock
     private AscendConfig mockConfig;
@@ -91,7 +91,7 @@ public class EventEmitterTest {
                 mockExecutionQueue, mockHttpClient, mockAllocationStore);
 
         AscendParticipant participant = AscendParticipant.builder().build();
-        EventEmitter emitter = new EventEmitter(mockConfig, participant);
+        EventEmitter emitter = new EventEmitter(mockConfig, participant, mockAllocationStore);
         String url = emitter.getEventUrl(type, score);
         Assert.assertEquals(createEventsUrl(actualConfig, type, score, participant), url);
     }
@@ -104,7 +104,7 @@ public class EventEmitterTest {
         JsonArray allocations = new JsonParser().parse(rawAllocation).getAsJsonArray();
 
         AscendParticipant participant = AscendParticipant.builder().build();
-        EventEmitter emitter = new EventEmitter(mockConfig, participant);
+        EventEmitter emitter = new EventEmitter(mockConfig, participant, mockAllocationStore);
         String url = emitter.getEventUrl(type, eid, cid);
         Assert.assertEquals(createAllocationEventUrl(actualConfig, allocations.get(0).getAsJsonObject(), type, participant), url);
     }
@@ -117,7 +117,7 @@ public class EventEmitterTest {
         JsonArray allocations = new JsonParser().parse(rawAllocation).getAsJsonArray();
 
         AscendParticipant participant = AscendParticipant.builder().build();
-        EventEmitter emitter = new EventEmitter(mockConfig, participant);
+        EventEmitter emitter = new EventEmitter(mockConfig, participant, mockAllocationStore);
         emitter.sendAllocationEvents(type, allocations);
 
         verify(mockHttpClient, times(1))
@@ -132,7 +132,7 @@ public class EventEmitterTest {
         JsonArray allocations = new JsonParser().parse(rawAllocation).getAsJsonArray();
 
         AscendParticipant participant = AscendParticipant.builder().build();
-        EventEmitter emitter = new EventEmitter(mockConfig,participant);
+        EventEmitter emitter = new EventEmitter(mockConfig, participant, mockAllocationStore);
         emitter.contaminate(allocations);
 
         verify(mockHttpClient, times(1))
@@ -148,7 +148,7 @@ public class EventEmitterTest {
         JsonArray allocations = new JsonParser().parse(rawAllocation).getAsJsonArray();
 
         AscendParticipant participant = AscendParticipant.builder().build();
-        EventEmitter emitter = new EventEmitter(mockConfig, participant);
+        EventEmitter emitter = new EventEmitter(mockConfig, participant, mockAllocationStore);
         emitter.confirm(allocations);
 
         verify(mockHttpClient, times(1))
@@ -164,7 +164,7 @@ public class EventEmitterTest {
         JsonArray allocations = new JsonParser().parse(rawAllocation).getAsJsonArray();
 
         AscendParticipant participant = AscendParticipant.builder().build();
-        EventEmitter emitter = new EventEmitter(mockConfig, participant);
+        EventEmitter emitter = new EventEmitter(mockConfig, participant, mockAllocationStore);
         emitter.emit(type);
 
         verify(mockHttpClient, times(1))
@@ -179,7 +179,7 @@ public class EventEmitterTest {
         JsonArray allocations = new JsonParser().parse(rawAllocation).getAsJsonArray();
 
         AscendParticipant participant = AscendParticipant.builder().build();
-        EventEmitter emitter = new EventEmitter(mockConfig, participant);
+        EventEmitter emitter = new EventEmitter(mockConfig, participant, mockAllocationStore);
         emitter.emit(type, score);
 
         verify(mockHttpClient, times(1))

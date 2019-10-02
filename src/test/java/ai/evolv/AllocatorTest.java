@@ -147,7 +147,8 @@ public class AllocatorTest {
         Allocator allocator = new Allocator(mockConfig, participant);
         JsonArray actualAllocations = allocator.resolveAllocationFailure();
 
-        verify(mockExecutionQueue, times(1)).executeAllWithValuesFromAllocations(allocations);
+        verify(mockExecutionQueue, times(1)).executeAllWithValuesFromAllocations(
+                eq(allocations), any(), eq(false), eq(false));
         Assert.assertEquals(Allocator.AllocationStatus.RETRIEVED, allocator.getAllocationStatus());
         Assert.assertEquals(allocations, actualAllocations);
     }
@@ -165,10 +166,10 @@ public class AllocatorTest {
         allocator.sandBagConfirmation();
         JsonArray actualAllocations = allocator.resolveAllocationFailure();
 
-        verify(mockHttpClient, times(1))
-                .get(createConfirmationUrl(actualConfig, allocations.get(0).getAsJsonObject(), participant));
-        verify(mockExecutionQueue, times(1))
-                .executeAllWithValuesFromAllocations(allocations);
+        EventEmitter mockEventEmitter = new EventEmitter(mockConfig, participant, mockAllocationStore);
+
+        verify(mockExecutionQueue, times(1)).executeAllWithValuesFromAllocations(
+                eq(allocations), any(), eq(true), eq(false));
         Assert.assertEquals(Allocator.AllocationStatus.RETRIEVED, allocator.getAllocationStatus());
         Assert.assertEquals(allocations, actualAllocations);
     }
@@ -186,10 +187,8 @@ public class AllocatorTest {
         allocator.sandBagContamination();
         JsonArray actualAllocations = allocator.resolveAllocationFailure();
 
-        verify(mockHttpClient, times(1))
-                .get(createContaminationUrl(actualConfig, allocations.get(0).getAsJsonObject(), participant));
-        verify(mockExecutionQueue, times(1))
-                .executeAllWithValuesFromAllocations(allocations);
+        verify(mockExecutionQueue, times(1)).executeAllWithValuesFromAllocations(
+                eq(allocations), any(), eq(false), eq(true));
         Assert.assertEquals(Allocator.AllocationStatus.RETRIEVED, allocator.getAllocationStatus());
         Assert.assertEquals(allocations, actualAllocations);
     }
@@ -230,7 +229,8 @@ public class AllocatorTest {
         verify(mockAllocationStore, times(1)).get(participant.getUserId());
         verify(mockAllocationStore, times(1)).put(participant.getUserId(), allocations);
         Assert.assertEquals(Allocator.AllocationStatus.RETRIEVED, allocator.getAllocationStatus());
-        verify(mockExecutionQueue, times(1)).executeAllWithValuesFromAllocations(allocations);
+        verify(mockExecutionQueue, times(1)).executeAllWithValuesFromAllocations(eq(allocations),
+                any(), eq(false), eq(false));
     }
 
     @Test
@@ -251,7 +251,8 @@ public class AllocatorTest {
         verify(mockAllocationStore, times(1)).get(participant.getUserId());
         verify(mockAllocationStore, times(1)).put(participant.getUserId(), allocations);
         Assert.assertEquals(Allocator.AllocationStatus.RETRIEVED, allocator.getAllocationStatus());
-        verify(mockExecutionQueue, times(1)).executeAllWithValuesFromAllocations(allocations);
+        verify(mockExecutionQueue, times(1)).executeAllWithValuesFromAllocations(eq(allocations),
+                any(), eq(false), eq(false));
     }
 
 }

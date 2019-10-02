@@ -7,7 +7,7 @@ plugins {
 
 group = "ai.evolv"
 archivesBaseName = "ascend-sdk"
-version = "0.7.0"
+version = "0.7.1"
 
 sourceCompatibility = 1.8
 
